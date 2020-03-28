@@ -157,3 +157,10 @@ include(gitversion.pri)
 #	src/gui/icons/userred24.png \
 #	src/gui/icons/personal.ico \
 #	src/gui/icons/agt_forum48.png
+
+defined(DEBUGLOGGING, var) {
+    message(DEBUGLOGGING is defined)
+    QMAKE_CXXFLAGS += -DDEBUGLOGGING=$${DEBUGLOGGING}
+}
+
+
