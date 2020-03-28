@@ -3,6 +3,10 @@
 ## Features
 
  * The communication goes «directly over i2p» from client to client, no server is required.[1] Note: The connections to the so-called «seedless» servers were removed from this project ; see : https://github.com/nonlinear-chaos-order-etc-etal/i2pchat/issues/40 . —hypn.
+ 
+## Screenshot
+
+![Screenshot image](https://user-images.githubusercontent.com/19966907/77824961-3be68f00-7141-11ea-83da-06b01395e46f.png)
 
 ## How to run it
 
