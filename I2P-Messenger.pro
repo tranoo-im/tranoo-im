@@ -161,6 +161,7 @@ include(gitversion.pri)
 defined(DEBUGLOGGING, var) {
     message(DEBUGLOGGING is defined)
     QMAKE_CXXFLAGS += -DDEBUGLOGGING=$${DEBUGLOGGING}
+    QMAKE_MOC_OPTIONS += -DDEBUGLOGGING=$${DEBUGLOGGING}
 }
 
 
