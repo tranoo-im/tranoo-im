@@ -1,5 +1,11 @@
 # I2P Chat AKA I2P Qt Messenger
 
+## Project Status
+
+Fully BROKEN: Unusable!
+
+I need to find time to fix all.
+
 ## Features
 
  * The communication goes «directly over i2p» from client to client, no server is required.[1] Note: The connections to the so-called «seedless» servers were removed from this project ; see : https://github.com/nonlinear-chaos-order-etc-etal/i2pchat/issues/40 . —hypn.
