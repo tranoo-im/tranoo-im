@@ -117,7 +117,7 @@ void form_MainWindow::onlineComboBoxChanged()
             QMessageBox* msgBox= new QMessageBox(NULL);
             msgBox->setIcon(QMessageBox::Information);
             msgBox->setText(tr("I2P-Messenger"));
-            msgBox->setInformativeText(tr("Sorry a File transfer or File receive is active,\nclosing aborted"));
+            msgBox->setInformativeText(tr("File transfer is in progress - cannot quit.\nAbort the transfer first."));
             msgBox->setStandardButtons(QMessageBox::Ok);
             msgBox->setDefaultButton(QMessageBox::Ok);
             msgBox->setWindowModality(Qt::NonModal);
@@ -126,7 +126,7 @@ void form_MainWindow::onlineComboBoxChanged()
 
         }
     }
-    else if(text.contains(tr("TryToConnect"),Qt::CaseInsensitive)==true){
+    else if(text.contains(tr("Connecting"),Qt::CaseInsensitive)==true){
     }
 
 }
@@ -229,9 +229,9 @@ void form_MainWindow::closeApplication(){
     if(Core->getFileTransferManager()->checkIfAFileTransferOrReciveisActive()==false){
 
         QMessageBox* msgBox= new QMessageBox(this);
-        msgBox->setIcon(QMessageBox::Question);
+//        msgBox->setIcon(QMessageBox::Question);
         msgBox->setText(tr("I2P-Messenger"));
-        msgBox->setInformativeText(tr("Are you sure ?"));
+        msgBox->setInformativeText(tr("Are you sure you wish to quit?"));
         msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
         msgBox->setDefaultButton(QMessageBox::Yes);
         msgBox->setWindowModality(Qt::WindowModal);
@@ -256,7 +256,7 @@ void form_MainWindow::closeApplication(){
         QMessageBox* msgBox= new QMessageBox(NULL);
         msgBox->setIcon(QMessageBox::Information);
         msgBox->setText(tr("I2P-Messenger"));
-        msgBox->setInformativeText(tr("Sorry a File transfer or File receive is active,\nClosing aborted"));
+        msgBox->setInformativeText(tr("File transfer is in progress - cannot quit.\nAbort the transfer first."));
         msgBox->setStandardButtons(QMessageBox::Ok);
         msgBox->setDefaultButton(QMessageBox::Ok);
         msgBox->setWindowModality(Qt::NonModal);
@@ -405,7 +405,7 @@ void form_MainWindow::eventUserChanged(){
 
 
 void form_MainWindow::openUserListeClicked()
-{	
+{
     QListWidgetItem* t=listWidget->item(listWidget->currentRow()+2);
 
     if(t->text()=="U"){
@@ -584,7 +584,7 @@ void form_MainWindow::closeEvent(QCloseEvent *e)
         hide();
         e->ignore();
     }
-    
+
     if(applicationIsClosing==true) {
         e->accept();
         QApplication::exit(0);
@@ -642,7 +642,7 @@ void form_MainWindow::OnlineStateChanged()
 
     if(onlinestatus==User::USERTRYTOCONNECT){
         comboBox->clear();
-        comboBox->addItem(QIcon(ICON_USER_TRYTOCONNECT)	, tr("TryToConnect"));		//index 0
+        comboBox->addItem(QIcon(ICON_USER_TRYTOCONNECT)	, tr("Connecting..."));		//index 0
         comboBox->addItem(QIcon(ICON_USER_OFFLINE)	, tr("Offline"));		//1
         comboBox->setCurrentIndex(0);
         trayIcon->setIcon(QIcon(ICON_USER_TRYTOCONNECT));
@@ -771,7 +771,7 @@ void form_MainWindow::initTryIcon()
     trayIcon->setToolTip(tr("I2P-Messenger"));
     trayIcon->setContextMenu(menu);
     trayIcon->setIcon(QIcon(ICON_CHAT));
-    
+
     connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this,
             SLOT(toggleVisibility(QSystemTrayIcon::ActivationReason)));
 
@@ -893,8 +893,9 @@ void form_MainWindow::UserInvisible(bool b)
 void form_MainWindow::eventChatWindowClosed(QString Destination)
 {
     if(mAllOpenChatWindows.contains(Destination)==true){
-        delete (mAllOpenChatWindows.value(Destination));
-        mAllOpenChatWindows.remove(Destination);
+        //delete (mAllOpenChatWindows.value(Destination)); // TODO: What for is what added?
+        //mAllOpenChatWindows.remove(Destination);
+        mAllOpenChatWindows[Destination]->hide();
     }
     else{
         qCritical()<<"form_MainWindow::eventChatWindowClosed\n"
@@ -937,6 +938,7 @@ void form_MainWindow::openChatWindow(QString Destination)
     }
     else{
         //open the existing chatwindow
+	mAllOpenChatWindows.value(Destination)->show();
         mAllOpenChatWindows.value(Destination)->getFocus();
     }
 
@@ -1019,7 +1021,7 @@ void form_MainWindow::openFileReciveWindow(qint32 StreamID)
 }
 
 void form_MainWindow::addUserToBlockList()
-{	
+{
     QListWidgetItem* t=listWidget->item(listWidget->currentRow()+2);
 
     if(t->text()=="U"){
