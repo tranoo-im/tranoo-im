@@ -165,6 +165,10 @@ form_ChatWidget::form_ChatWidget(CUser& user,CCore& Core,QDialog* parent /* = 0 
 	
 	useravatar_label->setAlignment(Qt::AlignCenter);
 	remoteAvatarImageChanged();
+
+	//QTimer *updater_chat = new QTimer(this);
+	//connect(timer, &QTimer::timeout, this, &form_ChatWidget::raise);
+	//timer->start();
 }
 
 void form_ChatWidget::newMessageRecived(){
@@ -195,8 +199,7 @@ void form_ChatWidget::newMessageRecived(){
 	else{
 		sb->setValue(sb->maximum());
 	}
-	
-	
+	this->raise();
 }
 
 void form_ChatWidget::addAllMessages(){
@@ -686,7 +689,7 @@ void form_ChatWidget::displayOfflineMessages(int index)
      Ui_form_chatwidget::cmd_back->setEnabled(false);
   }
 }
-
+// UDP: by voron like offline messages does not works correctly.
 void form_ChatWidget::saveChangedOfflineMessages()
 {
   if(textEdit->toPlainText().length()==0){
@@ -696,13 +699,14 @@ void form_ChatWidget::saveChangedOfflineMessages()
     	QString NewMessage=textEdit->toHtml();
 
 	if(NewMessage.length()<65535){
-	    offlineMessages.replace(currentOfflineMessageIndex-1,NewMessage);
-    
-	    //qDebug()<<textEdit->toHtml()<<endl;
+	    if(offlineMessages.size() > 1 )
+	    	offlineMessages.replace(currentOfflineMessageIndex-1, NewMessage);
+	    	//qDebug()<<textEdit->toHtml()<<endl;
 	    user.setUnsentedMessages(offlineMessages);
+	    
 	}
 	else{
-	    QMessageBox* msgBox= new QMessageBox(NULL);
+	    QMessageBox* msgBox= new QMessageBox(this);
 	    msgBox->setIcon(QMessageBox::Critical);
 	    msgBox->setText("I2P-Messenger");
 	    msgBox->setInformativeText(tr("Sorry, the chatmessage is too long!"));
