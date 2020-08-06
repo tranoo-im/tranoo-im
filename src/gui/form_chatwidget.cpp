@@ -136,7 +136,7 @@ form_ChatWidget::form_ChatWidget(CUser &user, CCore &Core,
   txtItalic->setChecked(mCurrentFont.italic());
   txtUnder->setChecked(mCurrentFont.underline());
 
-  resize(650, 400); // maybe too from QSS?
+  resize(480, 360); // maybe too from QSS?
   centerDialog();
 
   changeWindowsTitle();
@@ -211,7 +211,7 @@ void form_ChatWidget::addAllMessages() {
 void form_ChatWidget::addMessage(QString text) {
   QTextBrowser *chat = this->chat;
   //	QString& newMessage=text; // UDP(By Voron): DONT NEED, will be
-  //deleted!!!
+  // deleted!!!
 
   /* UPD: (by Voron)  temporarly disabled by me, because there is infinite
   cycle!! is willbe fixed.
@@ -400,7 +400,7 @@ void form_ChatWidget::changeWindowsTitle() {
     break;
   }
   case USERBLOCKEDYOU: {
-    OnlineStatus = tr("You were blocked");
+    OnlineStatus = tr("You have been blocked");
     this->setWindowIcon(QIcon(ICON_USER_BLOCKED_YOU));
     break;
   }
@@ -425,9 +425,7 @@ void form_ChatWidget::newFileTransfer() {
   } else {
     QMessageBox *msgBox = new QMessageBox(this);
     msgBox->setIcon(QMessageBox::Information);
-    msgBox->setText(tr("Sendfile"));
-    msgBox->setInformativeText(
-        tr("The other user must be online; send aborted"));
+    msgBox->setText(tr("\nCannot send files when contact is offline!"));
     msgBox->setStandardButtons(QMessageBox::Ok);
     msgBox->setDefaultButton(QMessageBox::Ok);
     msgBox->setWindowModality(Qt::NonModal);

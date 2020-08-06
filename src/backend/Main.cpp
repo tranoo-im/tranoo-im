@@ -32,6 +32,7 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include "Core.h"
 #include "form_Main.h"
 
 QString debugLogDir;
@@ -42,14 +43,14 @@ void myMessageHandler(QtMsgType type, const QMessageLogContext &context,
                       const QString &msg);
 
 void help(void) {
-
-  printf("%s \r\n"
-         "COMPILED:" __DATE__ "-" __TIME__ "\r\n"
-         "-h help\r\n"
-         "-w --workdir=<own path to work dir>\r\n"
-         "-s --stylesheet=<path to qss file> optional stylesheet\r\n"
-         "\r\n",
-         "I2PChat");
+  printf(
+      "\r\n%s\r\n\r\n"
+      // " [Built at " __TIME__ " on " __DATE__ "]\r\n"
+      "  -h --help                           - Display this help\r\n"
+      "  -p --profile <path to profile dir>  - Use specified profile dir (creates a new profile if non-existent)\r\n"
+      "  -s --stylesheet <path to qss file>  - Use specified qss stylesheet\r\n"
+      "\r\n",
+      CLIENTNAME " v" CLIENTVERSION);
   exit(0);
 }
 
@@ -117,11 +118,11 @@ int main(int argc, char *argv[]) {
     int ret;
     int option_index;
     // :: = optional_argument ; = no_argument ; : = required_argument
-    const char *short_options_optarg = "hb::w:s:";
+    const char *short_options_optarg = "hb::p:s:";
 
     const struct option long_options_optarg[] = {
         {"help", no_argument, NULL, 'h'},
-        {"workdir", required_argument, NULL, 'w'},
+        {"profile", required_argument, NULL, 'p'},
         {"stylesheet", required_argument, NULL, 's'},
         {NULL, 0, NULL, 0}};
     while ((ret = getopt_long(argc, argv, short_options_optarg,
@@ -132,7 +133,7 @@ int main(int argc, char *argv[]) {
         help();
         break;
       };
-      case 'w': {
+      case 'p': {
         configPath = QString(optarg);
         break;
       };

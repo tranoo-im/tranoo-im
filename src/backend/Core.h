@@ -36,7 +36,7 @@
 #include "User.h"
 #include "UserBlockManager.h"
 
-#define CLIENTVERSION "0.2.30"
+#define CLIENTVERSION "0.2.36"
 #define CLIENTNAME "I2PChat"
 
 using namespace SAM_Message_Types;
@@ -110,10 +110,10 @@ public:
 private slots:
   // <SIGNALS FROM CONNECTIONMANAGER>
   void slotStreamStatusReceived(const SAM_Message_Types::RESULT result,
-                               const qint32 ID, QString Message);
+                                const qint32 ID, QString Message);
   void slotNamingReplyReceived(const SAM_Message_Types::RESULT result,
-                              QString Name, QString Value = "",
-                              QString Message = "");
+                               QString Name, QString Value = "",
+                               QString Message = "");
   void slotStreamControllerStatusOK(bool Status);
   void slotIncomingStream(CI2PStream *stream);
   void slotNewSamPrivKeyGenerated(const QString SamPrivKey);
@@ -147,5 +147,12 @@ private:
   void stopCore();
   void restartCore();
   void closeAllActiveConnections();
+public slots:
+  void changeAccessIncomingUsers(bool);
+
+protected:
+  bool m_access_anyone_incoming; // new users.
+public:
+  bool getAccessAnyoneIncoming() { return m_access_anyone_incoming; }
 };
 #endif

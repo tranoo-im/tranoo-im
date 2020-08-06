@@ -97,6 +97,8 @@ private slots:
   // Windows end
   void namingMe();
   void copyDestination();
+  void copyB32();
+  //void userAutoDownload();
   void SendFile();
   void closeApplication();
   void eventUserChanged();
@@ -115,6 +117,9 @@ private slots:
   void toggleVisibility(QSystemTrayIcon::ActivationReason e);
   void toggleVisibilitycontextmenu();
   void OnlineStateChanged();
+  //
+signals:
+  void changeAllowIncoming(bool);
 
 private:
   void initStyle();

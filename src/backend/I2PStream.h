@@ -57,12 +57,12 @@ public:
   qint32 getID() const { return mID; }
   StreamMode getStreamMode() const { return mMode; }
   Type getConnectionType() const { return mConnectionType; }
-  bool getFIRSTPAKETCHAT_allreadySended() const {
-    return mFIRSTPAKETCHAT_allreadySended;
+  bool getFIRSTPACKETCHAT_alreadySent() const {
+    return mFIRSTPACKETCHAT_alreadySent;
   }
   QString getUsedFor() { return mUsedFor; };
   void setConnectionType(const Type newTyp);
-  void setFIRSTPAKETCHAT_allreadySended(bool theValue);
+  void setFIRSTPACKETCHAT_alreadySent(bool theValue);
   void setUsedFor(QString value) { mUsedFor = value; };
 
   void operator<<(const QByteArray Data);
@@ -81,7 +81,7 @@ private slots:
 signals:
   void signDebugMessages(const QString Message);
   void signStreamStatusReceived(const SAM_Message_Types::RESULT result,
-                               const qint32 ID, const QString Message);
+                                const qint32 ID, const QString Message);
   void signDataReceived(const qint32 ID, const QByteArray Data);
   void signModeAcceptIncomingStream(
       qint32 ID); // emit if Destination received (SILENCE=false)
@@ -100,9 +100,9 @@ private:
   bool mModeStreamConnect;
   bool mModeStreamAccept;
   bool mStatusReceived;
-  bool mHandShakeWasSuccesfullDone;
+  bool mHandshakeSuccessful;
   bool mDestinationReceived;
-  bool mFIRSTPAKETCHAT_allreadySended;
+  bool mFIRSTPACKETCHAT_alreadySent;
   QByteArray *mIncomingPackets;
   QTcpSocket mTcpSocket;
   QTimer *mTimer;
