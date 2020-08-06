@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by I2P-Messenger   				   *
- *   Messenger-Dev@I2P-Messenger   					   *
+ *   Copyright (C) 2008 by I2P-Messenger                                   *
+ *   Messenger-Dev@I2P-Messenger                                           *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,49 +18,45 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef FORM_FILERECIVE_H
-#define FORM_FILERECIVE_H
+#ifndef FORM_FILERECEIVE_H
+#define FORM_FILERECEIVE_H
 
-#include <QtGui>
 #include <QFileDialog>
+#include <QtGui>
 
-#include "ui_form_fileRecive.h"
+#include "ui_form_fileReceive.h"
 
+class CFileTransferReceive;
+class form_fileReceive : public QDialog, public Ui::form_FileReceive {
+  Q_OBJECT
+public:
+  form_fileReceive(CFileTransferReceive &FileReceive);
+  ~form_fileReceive();
 
-class CFileTransferRecive;
-class form_fileRecive : public QDialog, public Ui::form_FileRecive
-{
-	Q_OBJECT
-	public:
-		form_fileRecive(CFileTransferRecive& FileRecive);
-		~form_fileRecive();
+  // forbid some operators
+  form_fileReceive(const form_fileReceive &) = delete;
+  form_fileReceive &operator=(const form_fileReceive &) = delete;
 
-		//forbid some operators
-		form_fileRecive(const form_fileRecive&)=delete;
-		form_fileRecive& operator=(const form_fileRecive&)=delete;
+  void getFocus();
+  void start();
 
-		void getFocus();
-		void start();
+signals:
+  void closingFileReceiveWindow(qint32 StreamID);
 
-	signals:
-		void closingFileReciveWindow(qint32 StreamID);
+private slots:
+  void slot_Button();
+  void slot_allreadyReceivedSizeChanged(quint64 value);
+  void slot_FileReceivedFinishedOK();
+  void slot_FileReceiveError();
+  void slot_SpeedChanged(QString SNumber, QString Type);
 
-	private slots:
-		void slot_Button();
-		void slot_allreadyRecivedSizeChanged(quint64 value);
-		void slot_FileRecivedFinishedOK();
-		void slot_FileReciveError();
-		void slot_SpeedChanged(QString SNumber,QString Type);	
+private:
+  CFileTransferReceive &FileReceive;
+  const qint32 mStreamID;
 
-	private:
-		CFileTransferRecive& FileRecive;
-		const qint32 mStreamID;
-		
-		void closeEvent(QCloseEvent *e);
-		void keyPressEvent(QKeyEvent* event); 
-		void init();
-		void askTheUser();
-		
-	
+  void closeEvent(QCloseEvent *e);
+  void keyPressEvent(QKeyEvent *event);
+  void init();
+  void askTheUser();
 };
 #endif

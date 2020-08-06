@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>form_DebugMessages</class>
- <widget class="QDialog" name="form_DebugMessages">
+ <widget class="QWidget" name="form_DebugMessages">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>DebugMessages</string>
+   <string>Debug Messages</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="resourcen.qrc">
+    <normaloff>:/icons/debug.svg</normaloff>:/icons/debug.svg</iconset>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
@@ -35,17 +39,23 @@
    <item row="1" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="Tab_SAM">
       <attribute name="title">
-       <string>Sam</string>
+       <string>SAM</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_1">
        <item row="0" column="0">
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <widget class="QTextEdit" name="Sam_txt"/>
+          <widget class="QTextEdit" name="Sam_txt">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+          </widget>
          </item>
          <item>
           <layout class="QHBoxLayout" name="_2">
@@ -84,7 +94,6 @@
        </item>
       </layout>
      </widget>
-
      <widget class="QWidget" name="Tab_Connection">
       <attribute name="title">
        <string>Connection</string>
@@ -93,7 +102,13 @@
        <item row="0" column="0">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
-          <widget class="QTextEdit" name="connection_txt"/>
+          <widget class="QTextEdit" name="connection_txt">
+           <property name="font">
+            <font>
+             <pointsize>9</pointsize>
+            </font>
+           </property>
+          </widget>
          </item>
          <item>
           <layout class="QHBoxLayout" name="_4">
@@ -115,7 +130,7 @@
            <item>
             <widget class="QPushButton" name="cmd_Connection_snapshot">
              <property name="text">
-              <string>Do Connection Snapshot</string>
+              <string>&amp;Connection Snapshot</string>
              </property>
             </widget>
            </item>
@@ -136,6 +151,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resourcen.qrc"/>
+ </resources>
  <connections/>
 </ui>

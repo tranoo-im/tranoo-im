@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by I2P-Messenger   				   *
- *   Messenger-Dev@I2P-Messenger   					   *
+ *   Copyright (C) 2008 by I2P-Messenger                                   *
+ *   Messenger-Dev@I2P-Messenger                                           *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,115 +20,114 @@
 #ifndef PROTOCOL
 #define PROTOCOL
 
-#include <QtGui>
 #include <QThread>
-
+#include <QtGui>
 
 /*
-	First packet on connection must be:
-		CHATSYSTEM\tProtocolVersion\n					-> for normal Connection
-		CHATSYSTEMFILETRANSFER\tProtocolVersion\nSizeinBit\nFileName	-> for FileTransfer
-	else
-		send <the html info-page > 	//maybe with information about the user ???
-						//maybe good for usersearch ?
+        First packet on connection must be:
+                CHATSYSTEM\tProtocolVersion\n
+   -> for normal Connection
+                CHATSYSTEMFILETRANSFER\tProtocolVersion\nSizeinBit\nFileName
+   -> for FileTransfer else send <the html info-page > 	//maybe with information
+   about the user ???
+                                                //maybe good for usersearch ?
 
-	Every packet must be >= 8 Byte
-	1-4 Byte = Paketlength in Byte (HEX) without the 4 Byte Paketlength
-	5-8 Byte = PaketInfo
-	 >8 Byte = PaketData
+        Every packet must be >= 8 Byte
+        1-4 Byte = Paketlength in Byte (HEX) without the 4 Byte Paketlength
+        5-8 Byte = PaketInfo
+         >8 Byte = PaketData
 */
 
+namespace Protocol_Info {
+const QString PROTOCOLVERSION = "0.6";
+const double PROTOCOLVERSION_D = 0.6;
+const QString FIRSTPAKETCHAT = "CHATSYSTEM\t" + PROTOCOLVERSION + "\n";
+const QString HTTPPAGE =
+    "<html><header></header><body style=margin:10%;text-align:center;font-family:sans-serif;font-size:14pt;color:#000;background:#000;>"
+    "<div style=\"margin:auto;padding:30px;width:560px;color:#eee;border:1px solid #333;box-shadow:inset 0 0 0 1px #300;background:#111;\">"
+    "<img style=\"padding:3px;border:2px solid #322;border-radius:50%;background:#000;\" height=96 width=96 src=data:image/svg+xml;base64,PHN2ZyBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1MDguNjA5IDUwOC42MDkiIHZpZXdCb3g9IjAgMCA1MDguNjA5IDUwOC42MDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTUwLjg4NyIgY3k9IjIwMC4wNTMiIGZpbGw9IiNlZWI0OTAiIHI9IjM5LjY3MiIvPjxjaXJjbGUgY3g9IjM1Ny43MjIiIGN5PSIyMDAuMDUzIiBmaWxsPSIjZWViNDkwIiByPSIzOS42NzIiLz48cGF0aCBkPSJtNDYzLjUxMyA1MDguNjA5aC00MTguNDE2di03NC45MzVjMC0zNC45MjUgMjYuMTA5LTY0LjA4NSA2MC4zNTUtNjguNDkzbDkyLjIyOC0zNi42MmgxMTMuMjVsOTIuMjI4IDM2LjYyYzM0LjU4NSA0LjA2OSA2MC4zNTUgMzMuNTY4IDYwLjM1NSA2OC40OTN6IiBmaWxsPSIjOWQ5MGM1Ii8+PHBhdGggZD0ibTE3OC4wMTMgMzQ4LjU2N3YzMy41NjhjMCA0Mi43MjMgMzQuOTI0IDc4LjY2NSA3Ny42NDggNzcuOTg3IDQxLjM2Ny0uNjc4IDc0LjU5Ni0zNC41ODUgNzQuNTk2LTc2LjI5MXYtMzUuMjY0YzAtMTIuMjA3LTkuODMzLTIyLjA0LTIyLjA0LTIyLjA0aC0xMDguNTAzYy0xMS44NjguMzM5LTIxLjcwMSAxMC4xNzItMjEuNzAxIDIyLjA0eiIgZmlsbD0iIzgwNzVhZiIvPjxwYXRoIGQ9Im0yMDIuMDg3IDMwMC40MTl2NTUuNjA4YzAgMjguODIxIDIzLjM5NiA1Mi4yMTcgNTIuMjE3IDUyLjIxN3M1Mi4yMTctMjMuMzk2IDUyLjIxNy01Mi4yMTd2LTU1LjYwOHoiIGZpbGw9IiNlZWI0OTAiLz48cGF0aCBkPSJtMzA2Ljg2MSA5NC42MDFoLTEwNS4xMTNjLTI0Ljc1MiAwLTQ0Ljc1OCAyMC4wMDUtNDQuNzU4IDQ0Ljc1OHYxMDAuNzA1YzAgNTMuOTEzIDQzLjc0IDk3LjMxNCA5Ny4zMTQgOTcuMzE0IDUzLjkxMyAwIDk3LjMxNC00My43NCA5Ny4zMTQtOTcuMzE0di0xMDAuNzA1Yy4wMDEtMjQuNzUyLTIwLjAwNS00NC43NTgtNDQuNzU3LTQ0Ljc1OHoiIGZpbGw9IiNmYWNjYjQiLz48ZyBmaWxsPSIjNTY1NDVmIj48cGF0aCBkPSJtMzUxLjYxOSA1Mi44OTVzNzQuOTM1IDkuODMzIDAgMTUxLjIyNnYtNTcuOTgxcy01LjQyNS00MS43MDYtMzAuODU2LTQ0LjA3OXoiLz48cGF0aCBkPSJtMzAwLjc1OCAwaC05Mi45MDZjLTMuNzMgMC03LjQ2LjMzOS0xMC44NSAxLjAxNy0xNDAuMzc2IDAtNDAuMDExIDIxMC4yMjUtNDAuMDExIDIxMC4yMjUgMC04MS4wMzggNTAuODYxLTgxLjM3NyA1MC44NjEtODEuMzc3aDkzLjI0NWMzNS45NDIgMCA2NC43NjMtMjkuMTYgNjQuNzYzLTY0Ljc2MyAwLTM1Ljk0Mi0yOS4xNjEtNjUuMTAyLTY1LjEwMi02NS4xMDJ6Ii8+PC9nPjwvc3ZnPg==>"
+    "<h3>This is an I2PChat Destination</h3><br>For more info visit <a "
+    "href=https://vituperative.github.io/i2pchat/>https://vituperative.github.io/i2pchat/</a></div></body></html>\n\n\n";
+}; // namespace Protocol_Info
 
-
-namespace Protocol_Info{
-	const QString PROTOCOLVERSION  ="0.6";
-	const double  PROTOCOLVERSION_D= 0.6;
-	const QString FIRSTPAKETCHAT="CHATSYSTEM\t"+PROTOCOLVERSION+"\n";
-	const QString HTTPPAGE="<html><header></header><body>This is not a eepsite,this is a I2P-Messenger Destination<br><br></body></html>\n\n\n";
-};
-
-namespace PROTOCOL_TAGS{
-	enum COMMANDS_TAGS{
-		PING,
-		GET_PROTOCOLVERSION,
-		GET_MAX_PROTOCOLVERSION_FILETRANSFER,
-		GET_MIN_PROTOCOLVERSION_FILETRANSFER,
-		GET_CLIENTVERSION,
-		GET_CLIENTNAME,
-		GET_USER_ONLINESTATUS,
-		GET_USER_INFOS,
-		//Protocolversion >= 0.5
-		  GET_AVATARIMAGE
-		//-----------------------
-		//Protocolversion >= 0.6
-		//-----------------------
-		
-	};
-	enum MESSAGES_TAGS{
-		CHATMESSAGE,
-		ECHO_OF_PING,
-
-		ANSWER_OF_GET_PROTOCOLVERSION,
-		ANSWER_OF_GET_MAX_PROTOCOLVERSION_FILETRANSFER,
-		ANSWER_OF_GET_MIN_PROTOCOLVERSION_FILETRANSFER,
-		ANSWER_OF_GET_CLIENTVERSION,
-		ANSWER_OF_GET_CLIENTNAME,
-
-		USER_ONLINESTATUS_ONLINE,
-		USER_ONLINESTATUS_OFFLINE,
-		USER_ONLINESTATUS_INVISIBLE,
-		USER_ONLINESTATUS_WANTTOCHAT,
-		USER_ONLINESTATUS_AWAY,
-		USER_ONLINESTATUS_DONT_DISTURB,
-
-		USER_INFO_NICKNAME,
-		USER_INFO_GENDER,
-		USER_INFO_AGE,
-		USER_INFO_INTERESTS,
-		
-		USER_BLOCK_INVISIBLE,
-		USER_BLOCK_NORMAL,
-		
-		//Protocolversion >= 0.5
-		  ANSWER_OF_GET_AVATARIMAGE_IMAGE,
-		//-----------------------
-		//Protocolversion >= 0.6
-		  AVATARIMAGE_CHANGED,
-		//-----------------------
-
-	};
-	
+namespace PROTOCOL_TAGS {
+enum COMMANDS_TAGS {
+  PING,
+  GET_PROTOCOLVERSION,
+  GET_MAX_PROTOCOLVERSION_FILETRANSFER,
+  GET_MIN_PROTOCOLVERSION_FILETRANSFER,
+  GET_CLIENTVERSION,
+  GET_CLIENTNAME,
+  GET_USER_ONLINESTATUS,
+  GET_USER_INFOS,
+  // Protocolversion >= 0.5
+  GET_AVATARIMAGE
+  //-----------------------
+  // Protocolversion >= 0.6
+  //-----------------------
 
 };
+enum MESSAGES_TAGS {
+  CHATMESSAGE,
+  ECHO_OF_PING,
+
+  ANSWER_OF_GET_PROTOCOLVERSION,
+  ANSWER_OF_GET_MAX_PROTOCOLVERSION_FILETRANSFER,
+  ANSWER_OF_GET_MIN_PROTOCOLVERSION_FILETRANSFER,
+  ANSWER_OF_GET_CLIENTVERSION,
+  ANSWER_OF_GET_CLIENTNAME,
+
+  USER_ONLINESTATUS_ONLINE,
+  USER_ONLINESTATUS_OFFLINE,
+  USER_ONLINESTATUS_INVISIBLE,
+  USER_ONLINESTATUS_WANTTOCHAT,
+  USER_ONLINESTATUS_AWAY,
+  USER_ONLINESTATUS_DONT_DISTURB,
+
+  USER_INFO_NICKNAME,
+  USER_INFO_GENDER,
+  USER_INFO_AGE,
+  USER_INFO_INTERESTS,
+
+  USER_BLOCK_INVISIBLE,
+  USER_BLOCK_NORMAL,
+
+  // Protocolversion >= 0.5
+  ANSWER_OF_GET_AVATARIMAGE_IMAGE,
+  //-----------------------
+  // Protocolversion >= 0.6
+  AVATARIMAGE_CHANGED,
+  //-----------------------
+
+};
+
+}; // namespace PROTOCOL_TAGS
 using namespace Protocol_Info;
 using namespace PROTOCOL_TAGS;
 class CCore;
 class CUser;
-class CProtocol:public QObject{
-Q_OBJECT
+class CProtocol : public QObject {
+  Q_OBJECT
 public:
-	CProtocol(CCore& Core);
-	~CProtocol();
+  CProtocol(CCore &Core);
+  ~CProtocol();
 
-	//forbid some operators
-	CProtocol(const CProtocol&)=delete;
-	CProtocol& operator=(const CProtocol&)=delete;
+  // forbid some operators
+  CProtocol(const CProtocol &) = delete;
+  CProtocol &operator=(const CProtocol &) = delete;
 
-	QString getProtocolVersion()const {return PROTOCOLVERSION;};
-	void newConnectionChat(const qint32 ID);
+  QString getProtocolVersion() const { return PROTOCOLVERSION; };
+  void newConnectionChat(const qint32 ID);
 
-	void send(const MESSAGES_TAGS TAG,const qint32 ID,QByteArray Data) const;
-	void send(const MESSAGES_TAGS TAG,const qint32 ID,QString Data) const;
-	void send(const COMMANDS_TAGS TAG,const qint32 ID) const;
+  void send(const MESSAGES_TAGS TAG, const qint32 ID, QByteArray Data) const;
+  void send(const MESSAGES_TAGS TAG, const qint32 ID, QString Data) const;
+  void send(const COMMANDS_TAGS TAG, const qint32 ID) const;
 
 public slots:
-	void slotInputUnknown(const qint32 ID,const QByteArray Data);
-	void slotInputKnown(const qint32 ID, const QByteArray Data);
-	
-private:
-	CCore& mCore;
-	
+  void slotInputUnknown(const qint32 ID, const QByteArray Data);
+  void slotInputKnown(const qint32 ID, const QByteArray Data);
 
-	
+private:
+  CCore &mCore;
 };
 #endif
