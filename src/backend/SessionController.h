@@ -46,8 +46,8 @@ public:
 signals:
   void signDebugMessages(const QString Message);
   void signNamingReplyReceived(const SAM_Message_Types::RESULT result,
-                              QString Name, QString Value = "",
-                              QString Message = "");
+                               QString Name, QString Value = "",
+                               QString Message = "");
   void signSessionStreamStatusOK(bool Status);
   void signNewSamPrivKeyGenerated(const QString SamPrivKey);
 
@@ -70,12 +70,12 @@ private:
   CI2PSamMessageAnalyser *mAnalyser;
   QByteArray *mIncomingPackets;
 
-  bool mHandShakeWasSuccesfullDone;
+  bool mHandshakeSuccessful;
   bool mSessionWasSuccesfullCreated;
   bool mDoneDisconnect;
 
   inline void ConnectionReadyCheck() {
-    if (mHandShakeWasSuccesfullDone == false ||
+    if (mHandshakeSuccessful == false ||
         mSessionWasSuccesfullCreated == false ||
         mTcpSocket.state() != QAbstractSocket::ConnectedState)
       return;

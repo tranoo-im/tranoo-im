@@ -23,6 +23,7 @@
 #include "Core.h"
 #include "FileTransferSend.h"
 #include "I2PStream.h"
+#include "LoadHTML.cpp"
 #include "Protocol.h"
 #include "User.h"
 #include "UserManager.h"
@@ -37,10 +38,10 @@ void CProtocol::newConnectionChat(const qint32 ID) {
   CI2PStream *stream = mCore.getI2PStreamObjectByID(ID);
 
   // send the ChatSystem\tProtocolVersion
-  if (stream->getFIRSTPAKETCHAT_allreadySended() == false) {
+  if (stream->getFIRSTPACKETCHAT_alreadySent() == false) {
     // sometime StreamStatusReceived is called again with streamstatus Ok
-    stream->setFIRSTPAKETCHAT_allreadySended(true);
-    *(stream) << (QString)FIRSTPAKETCHAT;
+    stream->setFIRSTPACKETCHAT_alreadySent(true);
+    *(stream) << (QString)FIRSTPACKETCHAT;
   }
 }
 
@@ -100,18 +101,21 @@ void CProtocol::slotInputKnown(const qint32 ID, const QByteArray Data) {
 
   } else if (ProtocolInfoTag == "1004") { // GET_PROTOCOLVERSION,
     send(ANSWER_OF_GET_PROTOCOLVERSION, ID, mCore.getProtocolVersion());
-  } else if (ProtocolInfoTag == "1005") { // GET_MAX_PROTOCOLVERSION_FILETRANSFER
+  } else if (ProtocolInfoTag ==
+             "1005") { // GET_MAX_PROTOCOLVERSION_FILETRANSFER
     CUser *thisUser = mCore.getUserManager()->getUserByI2P_ID(ID);
 
     if (thisUser != NULL) {
-      if (thisUser->getProtocolVersion() == "0.3") {
-        // BUG in Messenger_0.2.15 BETA :(
-        send(ANSWER_OF_GET_MAX_PROTOCOLVERSION_FILETRANSFER, ID,
-             QString("0.2"));
-      } else {
-        send(ANSWER_OF_GET_MAX_PROTOCOLVERSION_FILETRANSFER, ID,
-             FileTransferProtocol::MAXPROTOCOLVERSION);
-      }
+      /*
+            if (thisUser->getProtocolVersion() == "0.3") {
+              // BUG in Messenger_0.2.15 BETA :(
+              send(ANSWER_OF_GET_MAX_PROTOCOLVERSION_FILETRANSFER, ID,
+                   QString("0.2"));
+            } else {
+      */
+      send(ANSWER_OF_GET_MAX_PROTOCOLVERSION_FILETRANSFER, ID,
+           FileTransferProtocol::MAXPROTOCOLVERSION);
+      //      }
     }
   } else if (ProtocolInfoTag == "1006") { // GET_USER_INFOS
     using namespace User;
@@ -123,7 +127,8 @@ void CProtocol::slotInputKnown(const qint32 ID, const QByteArray Data) {
 
     sAge.setNum(Infos.Age, 10);
     send(USER_INFO_AGE, ID, sAge);
-  } else if (ProtocolInfoTag == "1007") { // GET_MIN_PROTOCOLVERSION_FILETRANSFER
+  } else if (ProtocolInfoTag ==
+             "1007") { // GET_MIN_PROTOCOLVERSION_FILETRANSFER
     send(ANSWER_OF_GET_MIN_PROTOCOLVERSION_FILETRANSFER, ID,
          FileTransferProtocol::MINPROTOCOLVERSION);
   } else if (ProtocolInfoTag == "1008") { // GET_AVATARIMAGE
@@ -281,13 +286,13 @@ void CProtocol::slotInputUnknown(const qint32 ID, const QByteArray Data) {
   if (stream == 0) {
     auto msg = "Protocol.cpp : stream object is null, ignoring incoming data\n";
     qDebug() << msg;
-    QErrorMessage *box = new QErrorMessage();
-    box->showMessage(msg);
+    //    QErrorMessage *box = new QErrorMessage();
+    //    box->showMessage(msg);
     return;
   }
 
   if (stream->getConnectionType() == UNKNOWN) {
-    // check if First Paket = from a other CHATSYSTEM
+    // check if First Packet = from another CHATSYSTEM
     if (Data.contains("CHATSYSTEM\t") == true) {
       QByteArray temp = Data.mid(Data.indexOf("\t") + 1,
                                  Data.indexOf("\n") - Data.indexOf("\t") - 1);
@@ -304,7 +309,7 @@ void CProtocol::slotInputUnknown(const qint32 ID, const QByteArray Data) {
                     << "QString:\t" << version << endl;
       }
 
-      // dont send the firstpacket if you have connected someone
+      // don't send the first packet if you have connected someone
       //(the firstpacket is sended from core::StreamStatusReceived)
       if (ID < 0) {
         newConnectionChat(ID); // someone connect you
@@ -314,8 +319,9 @@ void CProtocol::slotInputUnknown(const qint32 ID, const QByteArray Data) {
           // is blocked
 
           if (versiond < 0.4) {
-            send(CHATMESSAGE, ID,
-                 QString("You were blocked,all Packets will be ignored !"));
+            send(
+                CHATMESSAGE, ID,
+                QString("You have been blocked, all packets will be ignored!"));
             mCore.getConnectionManager()->doDestroyStreamObjectByID(ID);
             return;
           } else {
@@ -324,7 +330,8 @@ void CProtocol::slotInputUnknown(const qint32 ID, const QByteArray Data) {
             settings.beginGroup("Security");
             if (settings.value("BlockStyle", "Normal").toString() == "Normal") {
               send(CHATMESSAGE, ID,
-                   QString("You were blocked ,all Packets will be ignored !"));
+                   QString(
+                       "You have been blocked, all packets will be ignored!"));
               send(USER_BLOCK_NORMAL, ID, QString(""));
             } else {
               // Block-Style Invisible
@@ -345,7 +352,7 @@ void CProtocol::slotInputUnknown(const qint32 ID, const QByteArray Data) {
               stream->getDestination()) == false) {
 
         if (versiond >= 0.3) {
-          mCore.getUserManager()->addNewUser("Receiving",
+          mCore.getUserManager()->addNewUser("...identifying...",
                                              stream->getDestination(), ID);
         } else {
           mCore.getUserManager()->addNewUser("Unknown",
@@ -373,7 +380,7 @@ void CProtocol::slotInputUnknown(const qint32 ID, const QByteArray Data) {
       }
       // return Data2;
     } else if (Data.contains("CHATSYSTEMFILETRANSFER\t") == true) {
-      // FIRSTPAKET
+      // FIRSTPACKET
       // ="CHATSYSTEMFILETRANSFER\t"+PROTOCOLVERSION+"\nSizeinBit\nFileName";
       QByteArray Data2 = Data;
 
@@ -404,13 +411,55 @@ void CProtocol::slotInputUnknown(const qint32 ID, const QByteArray Data) {
       mCore.getFileTransferManager()->addNewFileReceive(
           ID, FileName, FileSize, Destination, ProtovolVersion);
     } else {
-      // not from a other CHATSYSTEM
+      // not from another CHATSYSTEM
+      bool webprofileenabled = false;
       if (mCore.getUserBlockManager()->isDestinationInBlockList(
               stream->getDestination()) == true) {
         mCore.getConnectionManager()->doDestroyStreamObjectByID(ID);
       } else {
-        *(stream) << (QString)HTTPPAGE;
-        mCore.getConnectionManager()->doDestroyStreamObjectByID(ID);
+        QSettings settings(mCore.getConfigPath() + "/application.ini",
+                           QSettings::IniFormat);
+        settings.beginGroup("Security");
+        if (settings.value("WebProfile", "Enabled").toString() == "Enabled") {
+          webprofileenabled = true;
+        } else {
+          webprofileenabled = false;
+        }
+        if (settings.value("HideWebProfileWhenInvisible", "True").toString() ==
+            "True") {
+          QList<CUser *> users = mCore.getUserManager()->getUserList();
+          for (int i = 0; i < users.size(); i++) {
+            if (users.at(i)->getIsInvisible() == true) {
+              webprofileenabled = false;
+              break;
+            }
+          }
+          if (mCore.getOnlineStatus() == USERINVISIBLE) {
+            webprofileenabled = false;
+          }
+        }
+        settings.endGroup();
+        settings.sync();
+
+        if (webprofileenabled == true) {
+          //          printf("Web Profile enabled\n"); // Debug
+          QString TEMPHTTPPAGE =
+              loadfile(mCore.getConfigPath() + "/www/index.html");
+          if (TEMPHTTPPAGE.isEmpty()) {
+            TEMPHTTPPAGE = HTTPPAGE;
+          }
+          QString myNick = mCore.getUserInfos().Nickname;
+          myNick = myNick.replace("<", "").replace(">", "");
+          TEMPHTTPPAGE.replace("[USERNAME]", myNick);
+
+          TEMPHTTPPAGE.replace("[AVATARIMAGE]",
+                               mCore.getUserInfos().AvatarImage.toBase64());
+          TEMPHTTPPAGE.replace("[MYDEST]", mCore.getMyDestination());
+
+          *(stream) << (QString)(gethttpheader(TEMPHTTPPAGE) + TEMPHTTPPAGE);
+          mCore.getConnectionManager()->doDestroyStreamObjectByID(ID);
+        } else { // what to do if the webprofile is disabled?
+        }
       }
     }
   }
@@ -472,7 +521,7 @@ void CProtocol::send(const COMMANDS_TAGS TAG, const qint32 ID) const {
   }
   }
   Data.insert(0, ProtocolInfoTag);
-  Data.insert(0, "0004"); // No PaketData
+  Data.insert(0, "0004"); // No packet data
   *(stream) << Data;
 }
 
@@ -586,10 +635,10 @@ void CProtocol::send(const MESSAGES_TAGS TAG, const qint32 ID,
   QString temp;
 
   temp.setNum(Data.length() + 4, 16); // hex
-  QString Paketlength = QString("%1").arg(temp, 4, '0');
+  QString Packetlength = QString("%1").arg(temp, 4, '0');
 
   Data.insert(0, ProtocolInfoTag);
-  Data.insert(0, Paketlength);
+  Data.insert(0, Packetlength);
   *(stream) << Data;
 }
 

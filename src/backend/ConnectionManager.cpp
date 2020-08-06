@@ -52,10 +52,10 @@ bool CConnectionManager::doCreateSession(
 
     connect(StreamController,
             SIGNAL(signNamingReplyReceived(const SAM_Message_Types::RESULT,
-                                          QString, QString, QString)),
+                                           QString, QString, QString)),
             this,
             SIGNAL(signNamingReplyReceived(const SAM_Message_Types::RESULT,
-                                          QString, QString, QString)));
+                                           QString, QString, QString)));
 
     connect(StreamController, SIGNAL(signNewSamPrivKeyGenerated(const QString)),
             this, SIGNAL(signNewSamPrivKeyGenerated(const QString)));
@@ -84,15 +84,15 @@ void CConnectionManager::slotSessionStreamStatusOK(bool Status) {
 
   connect(t,
           SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                         const qint32, const QString)),
+                                          const qint32, const QString)),
           this,
           SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                         const qint32, const QString)));
+                                          const qint32, const QString)));
 
   t->doAccept();
-  Message = "• Created new StreamObjectListener [ID: ";
+  Message = "• [Stream ID: ";
   Message += QString::number(t->getID(), 10);
-  Message += "]";
+  Message += "] Created new StreamObjectListener";
 
   emit signDebugMessages(Message);
   StreamIncomingListener.insert(t->getID(), t);
@@ -135,10 +135,10 @@ bool CConnectionManager::doDestroyStreamObjectByID(qint32 ID) {
 
   disconnect(t,
              SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                            const qint32, const QString)),
+                                             const qint32, const QString)),
              this,
              SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                            const qint32, const QString)));
+                                             const qint32, const QString)));
 
   disconnect(t, SIGNAL(signDebugMessages(const QString)), this,
              SIGNAL(signDebugMessages(const QString)));
@@ -175,15 +175,15 @@ CConnectionManager::doCreateNewStreamObject(StreamMode Mode, bool Silence,
     if (dontConnectSendStreamStatus == false) {
       connect(t,
               SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                             const qint32, const QString)),
+                                              const qint32, const QString)),
               this,
               SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                             const qint32, const QString)));
+                                              const qint32, const QString)));
     }
 
-    Message = "• Created new StreamObject [ID: ";
+    Message = "• [Stream ID: ";
     Message += QString::number(t->getID(), 10);
-    Message += "]";
+    Message += "] Created new StreamObject";
 
     emit signDebugMessages(Message);
     allStreams.insert(IDforNewObject, t);
@@ -238,10 +238,10 @@ void CConnectionManager::slotModeAcceptIncomingStream(qint32 ID) {
 
     connect(t,
             SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                           const qint32, const QString)),
+                                            const qint32, const QString)),
             this,
             SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                           const qint32, const QString)));
+                                            const qint32, const QString)));
     allStreams.insert(ID, t);
     //----------------------------------------------------
 
@@ -258,14 +258,14 @@ void CConnectionManager::slotModeAcceptIncomingStream(qint32 ID) {
 
     connect(t2,
             SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                           const qint32, const QString)),
+                                            const qint32, const QString)),
             this,
             SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                           const qint32, const QString)));
+                                            const qint32, const QString)));
 
-    Message = "• Created new StreamObjectListener [ID: ";
+    Message = "• [Stream ID: ";
     Message += QString::number(t2->getID(), 10);
-    Message += "]";
+    Message += "] Created new StreamObjectListener";
 
     emit signDebugMessages(Message);
     t2->doAccept();
@@ -315,7 +315,7 @@ void CConnectionManager::doReStart() {
 }
 
 void CConnectionManager::stopp() {
-  // close all StreamObjekts
+  // close all StreamObjects
   QMapIterator<qint32, CI2PStream *> i(allStreams);
   while (i.hasNext()) {
     i.next();
@@ -323,7 +323,7 @@ void CConnectionManager::stopp() {
   }
   allStreams.clear();
 
-  // close all StreamIncomingListener
+  // close all StreamIncomingListeners
   QMapIterator<qint32, CI2PStream *> i2(StreamIncomingListener);
   while (i2.hasNext()) {
     i2.next();

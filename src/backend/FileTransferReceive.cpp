@@ -23,10 +23,11 @@
 #include "UserManager.h"
 
 CFileTransferReceive::CFileTransferReceive(CCore &Core, CI2PStream &Stream,
-                                         qint32 StreamID, QString FileName,
-                                         quint64 FileSize, QString Destination,
-                                         QString Protocolversion,
-                                         double ProtocolversionD)
+                                           qint32 StreamID, QString FileName,
+                                           quint64 FileSize,
+                                           QString Destination,
+                                           QString Protocolversion,
+                                           double ProtocolversionD)
 
     : mCore(Core), mStream(Stream), mStreamID(StreamID), mFileSize(FileSize),
       mDestination(Destination), mUsingProtocolVersion(Protocolversion),
@@ -44,10 +45,10 @@ CFileTransferReceive::CFileTransferReceive(CCore &Core, CI2PStream &Stream,
 
   connect(&Stream,
           SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                         const qint32, const QString)),
+                                          const qint32, const QString)),
           this,
           SLOT(slotStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                       const qint32, const QString)));
+                                        const qint32, const QString)));
 
   connect(&Stream, SIGNAL(signDataReceived(const qint32, const QByteArray)),
           this, SLOT(slotDataReceived(const qint32, QByteArray)));
@@ -55,7 +56,7 @@ CFileTransferReceive::CFileTransferReceive(CCore &Core, CI2PStream &Stream,
   connect(&mTimerForActAverageTransferSpeed, SIGNAL(timeout()), this,
           SLOT(slotCalcAverageTransferSpeed()));
 
-  mAllreadyReceivedSize = 0;
+  mAlreadyReceivedSize = 0;
   mRequestAccepted = false;
 
   settings.beginGroup("General");
@@ -80,9 +81,7 @@ CFileTransferReceive::CFileTransferReceive(CCore &Core, CI2PStream &Stream,
     mCore.getUserManager()
         ->getUserByI2P_Destination(Destination)
         ->slotIncomingMessageFromSystem(
-            tr(" Auto-accepted incoming file transfer<br>Filename: %1")
-                .arg(mFileName),
-            true);
+            tr(" Auto-accepted download [%1]").arg(mFileName), true);
 
     QDir dir(AutoAcceptedFilePath);
     if (dir.exists() == false) {
@@ -94,7 +93,7 @@ CFileTransferReceive::CFileTransferReceive(CCore &Core, CI2PStream &Stream,
     mCore.getUserManager()
         ->getUserByI2P_Destination(Destination)
         ->slotIncomingMessageFromSystem(
-            tr(" Incoming file transfer<br>Filename: %1"
+            tr(" Incoming file transfer [%1]"
                "<br>Accept or reject from the userlist")
                 .arg(mFileName));
   }
@@ -120,7 +119,7 @@ void CFileTransferReceive::slotStreamStatusReceived(
   case (SAM_Message_Types::TIMEOUT):
   case (SAM_Message_Types::CLOSED): {
     mTimerForActAverageTransferSpeed.stop();
-    if (mAllreadyReceivedSize == mFileSize) {
+    if (mAlreadyReceivedSize == mFileSize) {
       emit signFileReceivedFinishedOK();
 
       QString SizeName;
@@ -158,7 +157,7 @@ void CFileTransferReceive::slotStreamStatusReceived(
       }
       mCore.getUserManager()
           ->getUserByI2P_Destination(mDestination)
-          ->slotIncomingMessageFromSystem(tr("Transfer of %1 complete [%2 %3]")
+          ->slotIncomingMessageFromSystem(tr("Download complete [%1 %2 %3]")
                                               .arg(mFileName)
                                               .arg(SSize)
                                               .arg(SizeName));
@@ -169,17 +168,14 @@ void CFileTransferReceive::slotStreamStatusReceived(
         mCore.getUserManager()
             ->getUserByI2P_Destination(mDestination)
             ->slotIncomingMessageFromSystem(
-                tr("Sender cancelled file transfer of %1 ‣ Incomplete file "
-                   "deleted")
-                    .arg(mFileName));
+                tr("Sender aborted file transfer [%1]").arg(mFileName));
 
       } else {
         mFileForReceive.remove();
         mCore.getUserManager()
             ->getUserByI2P_Destination(mDestination)
-            ->slotIncomingMessageFromSystem(tr("You cancelled file transfer of "
-                                               "%1 ‣ Incomplete file deleted")
-                                                .arg(mFileName));
+            ->slotIncomingMessageFromSystem(
+                tr("Download aborted [%1]").arg(mFileName));
       }
     }
 
@@ -194,7 +190,7 @@ void CFileTransferReceive::slotStreamStatusReceived(
     mCore.getUserManager()
         ->getUserByI2P_Destination(mDestination)
         ->slotIncomingMessageFromSystem(
-            tr("I2P Stream Error while receiving %1<br>%2")
+            tr("I2P Stream Error: Download failed [%1]<br>%2")
                 .arg(mFileName)
                 .arg(Message));
     mFileForReceive.close();
@@ -208,7 +204,7 @@ void CFileTransferReceive::slotStreamStatusReceived(
     mCore.getUserManager()
         ->getUserByI2P_Destination(mDestination)
         ->slotIncomingMessageFromSystem(
-            tr("I2P Stream Error while receiving %1 [INVALID_KEY]<br>%2")
+            tr("I2P Stream Error (Invalid Key): Download failed [%1]<br>%2")
                 .arg(mFileName)
                 .arg(Message));
 
@@ -223,7 +219,7 @@ void CFileTransferReceive::slotStreamStatusReceived(
     mCore.getUserManager()
         ->getUserByI2P_Destination(mDestination)
         ->slotIncomingMessageFromSystem(
-            tr("I2P Stream Error while receiving %1 [INVALID_ID]<br>%2")
+            tr("I2P Stream Error (Invalid ID): Download failed [%1]<br>%2")
                 .arg(mFileName)
                 .arg(Message));
 
@@ -246,11 +242,11 @@ void CFileTransferReceive::slotDataReceived(const qint32 ID, QByteArray t) {
              << "mStreamID!=ID WTF";
   }
 
-  mAllreadyReceivedSize += t.length();
+  mAlreadyReceivedSize += t.length();
   mFileForReceive.write(t);
   mFileForReceive.flush();
 
-  emit signAllreadyReceivedSizeChanged(mAllreadyReceivedSize);
+  emit signgetTransferredSizeChanged(mAlreadyReceivedSize);
 
   if (mUsingProtocolVersionD == 0.2) {
     mStream.operator<<(QString("2")); // next block
@@ -260,7 +256,7 @@ void CFileTransferReceive::slotDataReceived(const qint32 ID, QByteArray t) {
         QString("2:\t" + QString::number(t.length(), 10) + '\n'));
   }
 
-  if (mAllreadyReceivedSize == mFileSize) {
+  if (mAlreadyReceivedSize == mFileSize) {
 
     QString SizeName;
     QString SSize;
@@ -302,9 +298,8 @@ void CFileTransferReceive::slotDataReceived(const qint32 ID, QByteArray t) {
     }
     mCore.getUserManager()
         ->getUserByI2P_Destination(mDestination)
-        ->slotIncomingMessageFromSystem("<br>File transfer of " + mFileName +
-                                        " complete [" + SSize + " " + SizeName +
-                                        "]");
+        ->slotIncomingMessageFromSystem("<br>Download complete [" + mFileName +
+                                        " " + SSize + " " + SizeName + "]");
 
     mFileForReceive.close();
     mCore.getFileTransferManager()->removeFileReceive(mStreamID);
@@ -362,7 +357,7 @@ void CFileTransferReceive::slotCalcAverageTransferSpeed() {
   int departedtime = (mTimer.elapsed() / 1000);
   if (departedtime <= 0)
     departedtime = 1;
-  int speed = mAllreadyReceivedSize / departedtime;
+  int speed = mAlreadyReceivedSize / departedtime;
 
   QString speedSize;
   QString speedType;
@@ -374,9 +369,9 @@ void CFileTransferReceive::slotCalcAverageTransferSpeed() {
 }
 
 void CFileTransferReceive::doConvertNumberToTransferSize(quint64 inNumber,
-                                                        QString &outNumber,
-                                                        QString &outType,
-                                                        bool addStoOutType) {
+                                                         QString &outNumber,
+                                                         QString &outType,
+                                                         bool addStoOutType) {
   return mCore.doConvertNumberToTransferSize(inNumber, outNumber, outType,
                                              addStoOutType);
 }
@@ -386,9 +381,9 @@ void CFileTransferReceive::CalcETA(int speed) {
   int secLeft;
 
   if (speed > 0) {
-    secLeft = (mFileSize - mAllreadyReceivedSize) / speed;
+    secLeft = (mFileSize - mAlreadyReceivedSize) / speed;
   } else {
-    secLeft = mFileSize - mAllreadyReceivedSize;
+    secLeft = mFileSize - mAlreadyReceivedSize;
   }
 
   if (secLeft > 86400) {

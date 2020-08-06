@@ -18,20 +18,23 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QSystemTrayIcon>
-
-#include "UserManager.h"
 #include "form_Main.h"
+#include "UserManager.h"
+#include <QIcon>
+#include <QSystemTrayIcon>
 
 form_MainWindow::form_MainWindow(QString configDir, QWidget *parent)
     : QMainWindow(parent) {
+  setWindowFlags(Qt::Dialog | Qt::CustomizeWindowHint | Qt::WindowTitleHint |
+                 Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint);
   setupUi(this); // this sets up GUI
 
   QApplication::setQuitOnLastWindowClosed(false);
   Core = new CCore(configDir);
   connect(Core, SIGNAL(signUserStatusChanged()), this,
           SLOT(eventUserChanged()));
-
+  connect(this, SIGNAL(changeAllowIncoming(bool)), Core,
+          SLOT(changeAccessIncomingUsers(bool)));
   connect(Core, SIGNAL(signOnlineStatusChanged()), this,
           SLOT(OnlineStateChanged()));
 
@@ -65,7 +68,7 @@ form_MainWindow::form_MainWindow(QString configDir, QWidget *parent)
 
   Core->setOnlineStatus(USEROFFLINE);
   eventUserChanged();
-  eventNicknameChanged();
+  eventNicknameChanged(); //
   eventAvatarImageChanged();
 }
 
@@ -84,21 +87,20 @@ void form_MainWindow::onlineComboBoxChanged() {
   if (text.contains(tr("Online"), Qt::CaseInsensitive) == true) {
     if (Core->getOnlineStatus() != User::USERONLINE)
       Core->setOnlineStatus(User::USERONLINE);
-  } else if (text.contains(tr(" Want to chat"), Qt::CaseInsensitive) == true) {
+  } else if (text.contains(tr("Want to chat"), Qt::CaseInsensitive) == true) {
     if (Core->getOnlineStatus() != User::USERWANTTOCHAT)
       Core->setOnlineStatus(User::USERWANTTOCHAT);
   } else if (text.contains(tr("Away"), Qt::CaseInsensitive) == true) {
     if (Core->getOnlineStatus() != User::USERAWAY)
       Core->setOnlineStatus(User::USERAWAY);
-  } else if (text.contains(tr("Do not disturb"), Qt::CaseInsensitive) == true) {
+  } else if (text.contains(tr("disturb"), Qt::CaseInsensitive) == true) {
     if (Core->getOnlineStatus() != User::USERDONT_DISTURB)
       Core->setOnlineStatus(User::USERDONT_DISTURB);
   } else if (text.contains(tr("Invisible"), Qt::CaseInsensitive) == true) {
     if (Core->getOnlineStatus() != User::USERINVISIBLE)
       Core->setOnlineStatus(User::USERINVISIBLE);
   } else if (text.contains(tr("Offline"), Qt::CaseInsensitive) == true) {
-    if (Core->getFileTransferManager()
-            ->checkIfAFileTransferOrReceiveisActive() == false) {
+    if (Core->getFileTransferManager()->checkActiveFileTransfer() == false) {
       if (Core->getOnlineStatus() != User::USEROFFLINE)
         Core->setOnlineStatus(User::USEROFFLINE);
     } else {
@@ -162,7 +164,8 @@ void form_MainWindow::initToolBars() {
       }
   */
 
-  toolBar->addAction(QIcon(ICON_MYDESTINATION), tr("Copy Destination to clipboard"), this,
+  toolBar->addAction(QIcon(ICON_MYDESTINATION),
+                     tr("Copy Destination to clipboard"), this,
                      SLOT(namingMe()));
   toolBar->addAction(QIcon(ICON_SETTINGS), tr("Settings"), this,
                      SLOT(openConfigWindow()));
@@ -207,24 +210,27 @@ void form_MainWindow::openDebugMessagesWindow() {
 void form_MainWindow::namingMe() {
   QClipboard *clipboard = QApplication::clipboard();
   QString Destination = Core->getMyDestination();
+  QPixmap pixmap = QPixmap(":/icons/avatar.svg");
+  setWindowIcon(QIcon(pixmap));
   if (Destination != "") {
     clipboard->setText(Destination);
     QMessageBox::information(
-        this, "", tr("Your Destination has been copied to the clipboard"),
+        this, "", tr("\nYour Destination has been copied to the clipboard"),
         QMessageBox::Close);
-  } else
+  } else {
     QMessageBox::information(this, "",
-                             tr("Your Client must be Online for that"),
+                             tr("\nYou must be online to copy Destination"),
                              QMessageBox::Close);
+  }
 }
 void form_MainWindow::closeApplication() {
-
-  if (Core->getFileTransferManager()->checkIfAFileTransferOrReceiveisActive() ==
-      false) {
+  if (Core->getFileTransferManager()->checkActiveFileTransfer() == false) {
 
     QMessageBox *msgBox = new QMessageBox(this);
+    QPixmap pixmap = QPixmap(":/icons/avatar.svg");
+    msgBox->setWindowIcon(QIcon(pixmap));
     msgBox->setIcon(QMessageBox::Question);
-    msgBox->setText(tr("Are you sure you wish to quit?"));
+    msgBox->setText(tr("\nAre you sure you wish to quit?"));
     msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox->setDefaultButton(QMessageBox::Yes);
     msgBox->setWindowModality(Qt::WindowModal);
@@ -243,12 +249,12 @@ void form_MainWindow::closeApplication() {
 
     this->close();
   } else {
-
     QMessageBox *msgBox = new QMessageBox(NULL);
+    QPixmap pixmap = QPixmap(":/icons/avatar.svg");
+    msgBox->setWindowIcon(QIcon(pixmap));
     msgBox->setIcon(QMessageBox::Information);
-    msgBox->setText(tr("I2PChat"));
-    msgBox->setInformativeText(tr("File transfer is in progress - cannot "
-                                  "quit.\nAbort the transfer first."));
+    msgBox->setText(
+        tr("\nFile transfer in progress...\nCancel transfer first!"));
     msgBox->setStandardButtons(QMessageBox::Ok);
     msgBox->setDefaultButton(QMessageBox::Ok);
     msgBox->setWindowModality(Qt::NonModal);
@@ -382,6 +388,8 @@ void form_MainWindow::eventUserChanged() {
 
 void form_MainWindow::openUserListeClicked() {
   QListWidgetItem *t = listWidget->item(listWidget->currentRow() + 2);
+  QPixmap pixmap = QPixmap(":/icons/avatar.svg");
+  setWindowIcon(QIcon(pixmap));
 
   if (t->text() == "U") {
     // open Chatwindow
@@ -441,6 +449,18 @@ void form_MainWindow::connecttreeWidgetCostumPopupMenu(QPoint point) {
   QAction *UserChat = new QAction(QIcon(ICON_CHAT), tr("Chat"), this);
   connect(UserChat, SIGNAL(triggered()), this, SLOT(openUserListeClicked()));
 
+  QAction *UserAutoDownload = new QAction(QIcon(ICON_USER_DOWNLOAD), tr("Auto-download"), this);
+  UserAutoDownload->setCheckable(true);
+  // connect(UserAutoDownload, SIGNAL(triggered(bool)), this,
+  //         SLOT(UserAutoDownload(bool)));
+  UserAutoDownload->setEnabled(false);
+
+  QAction *UserInvisible =
+      new QAction(QIcon(ICON_USER_INVISIBLE), tr("Invisible"), this);
+  UserInvisible->setCheckable(true);
+  connect(UserInvisible, SIGNAL(triggered(bool)), this,
+          SLOT(UserInvisible(bool)));
+
   QAction *UserDelete =
       new QAction(QIcon(ICON_USER_DELETE), tr("Delete"), this);
   connect(UserDelete, SIGNAL(triggered()), this, SLOT(deleteUserClicked()));
@@ -453,14 +473,14 @@ void form_MainWindow::connecttreeWidgetCostumPopupMenu(QPoint point) {
       new QAction(QIcon(ICON_COPYBASE64), tr("Copy Destination"), this);
   connect(CopyDestination, SIGNAL(triggered()), this, SLOT(copyDestination()));
 
-  QAction *ShowUserInfos = new QAction(QIcon(ICON_ABOUT), tr("Userinfo"), this);
-  connect(ShowUserInfos, SIGNAL(triggered()), this, SLOT(showUserInfos()));
+  QAction *CopyB32 =
+      new QAction(QIcon(ICON_WEB), tr("Copy B32 Address"), this);
+  connect(CopyB32, SIGNAL(triggered()), this, SLOT(copyB32()));
+  CopyB32->setEnabled(false);
 
-  QAction *UserInvisible =
-      new QAction(QIcon(ICON_USER_INVISIBLE), tr("Invisible"), this);
-  UserInvisible->setCheckable(true);
-  connect(UserInvisible, SIGNAL(triggered(bool)), this,
-          SLOT(UserInvisible(bool)));
+  QAction *ShowUserInfos =
+      new QAction(QIcon(ICON_ABOUT), tr("User Info"), this);
+  connect(ShowUserInfos, SIGNAL(triggered()), this, SLOT(showUserInfos()));
 
   QAction *UserToBlockList = new QAction(QIcon(ICON_BLOCK), tr("Block"), this);
   connect(UserToBlockList, SIGNAL(triggered()), this,
@@ -484,31 +504,37 @@ void form_MainWindow::connecttreeWidgetCostumPopupMenu(QPoint point) {
     CUser *User;
     User = Core->getUserManager()->getUserByI2P_Destination(Destination);
 
-    if (User->getConnectionStatus() == ONLINE) {
-      QAction *UserSendFile =
-          new QAction(QIcon(ICON_FILETRANSFER_SEND), tr("SendFile"), this);
-      connect(UserSendFile, SIGNAL(triggered()), this, SLOT(SendFile()));
-      contextMnu.addAction(UserSendFile);
-    }
-
+    // TODO: FIX!
+    /*
+        if (User->getConnectionStatus() == ONLINE) {
+          QAction *UserSendFile =
+              new QAction(QIcon(ICON_FILETRANSFER_SEND), tr("SendFile"), this);
+          connect(UserSendFile, SIGNAL(triggered()), this, SLOT(SendFile()));
+          contextMnu.addAction(UserSendFile);
+        }
+    */
     if (User->getIsInvisible() == true) {
       UserInvisible->setChecked(true);
     } else {
       UserInvisible->setChecked(false);
     }
 
-    contextMnu.addAction(UserToBlockList);
-    contextMnu.addSeparator();
-    contextMnu.addAction(UserRename);
-    contextMnu.addAction(UserDelete);
-    contextMnu.addAction(CopyDestination);
     contextMnu.addAction(UserInvisible);
+    contextMnu.addAction(UserAutoDownload);
+    contextMnu.addAction(UserToBlockList);
+    contextMnu.addAction(UserDelete);
+    contextMnu.addSeparator();
     contextMnu.addAction(ShowUserInfos);
+    contextMnu.addAction(CopyDestination);
+    contextMnu.addAction(CopyB32);
+    contextMnu.addAction(UserRename);
 
     contextMnuPos.addAction(UP);
     contextMnuPos.addAction(DOWN);
 
     contextMnu.addMenu(&contextMnuPos);
+    // TODO: Fix width of context menu and ensure sub-menu overlaps
+    // contextMnu.setMaximumWidth(170);
     contextMnu.exec(mevent->globalPos());
   }
 }
@@ -517,11 +543,12 @@ void form_MainWindow::deleteUserClicked() {
 
   QListWidgetItem *t = listWidget->item(listWidget->currentRow() + 1);
   QString Destination = t->text();
+  QPixmap pixmap = QPixmap(":/icons/avatar.svg");
+  setWindowIcon(QIcon(pixmap));
 
   QMessageBox *msgBox = new QMessageBox(this);
   msgBox->setIcon(QMessageBox::Question);
-  msgBox->setText(tr("I2PChat"));
-  msgBox->setInformativeText(tr("Do you really want to delete this contact?"));
+  msgBox->setText(tr("\nReally delete contact?"));
   msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
   msgBox->setDefaultButton(QMessageBox::Yes);
   msgBox->setWindowModality(Qt::WindowModal);
@@ -611,21 +638,21 @@ void form_MainWindow::OnlineStateChanged() {
   if (onlinestatus == User::USERTRYTOCONNECT) {
     comboBox->clear();
     comboBox->addItem(QIcon(ICON_USER_TRYTOCONNECT),
-                      tr(" Connecting..."));                     // index 0
-    comboBox->addItem(QIcon(ICON_USER_OFFLINE), tr(" Offline")); // 1
+                      tr("Connecting..."));                     // index 0
+    comboBox->addItem(QIcon(ICON_USER_OFFLINE), tr("Offline")); // 1
     comboBox->setCurrentIndex(0);
     trayIcon->setIcon(QIcon(ICON_USER_TRYTOCONNECT));
   } else {
     if (comboBox->count() < 6) {
       comboBox->clear();
 
-      comboBox->addItem(QIcon(ICON_USER_ONLINE), tr(" Online")); // index 0
-      comboBox->addItem(QIcon(ICON_USER_WANTTOCHAT), tr(" Want to chat")); // 1
-      comboBox->addItem(QIcon(ICON_USER_AWAY), tr(" Away"));               // 2
+      comboBox->addItem(QIcon(ICON_USER_ONLINE), tr("Online")); // index 0
+      comboBox->addItem(QIcon(ICON_USER_WANTTOCHAT), tr("Want to chat")); // 1
+      comboBox->addItem(QIcon(ICON_USER_AWAY), tr("Away"));               // 2
       comboBox->addItem(QIcon(ICON_USER_DONT_DISTURB),
-                        tr(" Do not disturb"));                        // 3
-      comboBox->addItem(QIcon(ICON_USER_INVISIBLE), tr(" Invisible")); // 4
-      comboBox->addItem(QIcon(ICON_USER_OFFLINE), tr(" Offline"));     // 5
+                        tr("No disturbo"));                           // 3
+      comboBox->addItem(QIcon(ICON_USER_INVISIBLE), tr("Invisible")); // 4
+      comboBox->addItem(QIcon(ICON_USER_OFFLINE), tr("Offline"));     // 5
     }
 
     if (onlinestatus == User::USERONLINE) {
@@ -783,9 +810,21 @@ void form_MainWindow::copyDestination() {
   QClipboard *clipboard = QApplication::clipboard();
 
   clipboard->setText(Destination);
-  QMessageBox::information(
-      this, "", tr("The Destination has been copied to the clipboard"),
-      QMessageBox::Close);
+  QMessageBox::information(this, "",
+                           tr("\nContact's Destination copied to clipboard"),
+                           QMessageBox::Close);
+}
+
+void form_MainWindow::copyB32() {
+  QListWidgetItem *t = listWidget->item(listWidget->currentRow() + 1);
+  QString Destination = t->text();
+  QString Address = "http://this_is_a_placeholder";
+  QClipboard *clipboard = QApplication::clipboard();
+
+  clipboard->setText(Address);
+  QMessageBox::information(this, "",
+                           tr("\nContact's profile address copied to clipboard"),
+                           QMessageBox::Close);
 }
 
 void form_MainWindow::muteSound() {
@@ -820,8 +859,9 @@ void form_MainWindow::showUserInfos() {
   } else {
     msgBox.setIconPixmap(avatar);
   }
-  msgBox.setText("");
-  msgBox.setInformativeText(UserInfos);
+  QPixmap pixmap = QPixmap(":/icons/avatar.svg");
+  msgBox.setWindowIcon(QIcon(pixmap));
+  msgBox.setText("\n" + UserInfos);
   msgBox.setStandardButtons(QMessageBox::Ok);
   msgBox.setDefaultButton(QMessageBox::Ok);
   msgBox.setWindowModality(Qt::NonModal);
@@ -923,7 +963,7 @@ void form_MainWindow::eventFileSendWindowClosed(qint32 StreamID) {
 
 void form_MainWindow::openFileSendWindow(qint32 StreamID) {
   CFileTransferSend *TransferSend =
-      Core->getFileTransferManager()->getFileTransferSendsByID(StreamID);
+      Core->getFileTransferManager()->getFileSendByID(StreamID);
 
   if (TransferSend == NULL) {
     qCritical() << "form_MainWindow::openFileSendWindow\n"
@@ -948,7 +988,7 @@ void form_MainWindow::openFileSendWindow(qint32 StreamID) {
 
 void form_MainWindow::openFileReceiveWindow(qint32 StreamID) {
   CFileTransferReceive *receive =
-      Core->getFileTransferManager()->getFileTransferReceiveByID(StreamID);
+      Core->getFileTransferManager()->getFileReceiveByID(StreamID);
   if (receive == NULL) {
     qCritical() << "form_MainWindow::openFileReceiveWindow\n"
                 << "Can't find FileReceive Object with ID: " << StreamID
@@ -1034,8 +1074,17 @@ void form_MainWindow::eventDebugWindowClosed() {
   mDebugWindow = NULL;
 }
 
+static void ElideLabel(QLabel *label, QString text) {
+  QFontMetrics metrix(label->font());
+  int width = label->width();
+  QString clippedText = metrix.elidedText(text, Qt::ElideRight, width);
+  label->setText(clippedText);
+}
+
 void form_MainWindow::eventNicknameChanged() {
-  nicknamelabel->setText(Core->getUserInfos().Nickname);
+  // nicknamelabel->setText(Core->getUserInfos().Nickname);
+  QString nick = Core->getUserInfos().Nickname;
+  ElideLabel(nicknamelabel, nick);
 }
 
 void form_MainWindow::eventAvatarImageChanged() {

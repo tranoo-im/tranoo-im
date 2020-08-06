@@ -154,35 +154,37 @@ QString CUserManager::getUserInfosByI2P_Destination(QString Destination) const {
       CUser *theUser = mUsers.at(i);
 
       if (theUser->getClientName() != nullptr) {
-        Infos = "Nickname:\t\t" + theUser->getName() + "\n";
-        Infos += "Client:\t\t" + theUser->getClientName() + " " +
-                 theUser->getClientVersion() + "\n";
-        Infos += "Protocol version:\t" + theUser->getProtocolVersion() + "\n";
-        Infos += "File transfer support:\t" +
-                 theUser->getMinProtocolVersionFiletransfer() + " - " +
-                 theUser->getMaxProtocolVersionFiletransfer() + "\n";
-      } else {
-        Infos = "Nickname:\t" + theUser->getName() + "\n";
-        Infos += "Status:\tOffline\n";
-      }
+        Infos = "Nickname:\t\t" + theUser->getName() + "  \n";
 
-      if (theUser->getProtocolVersion_D() >= 0.3) {
-        CReceivedInfos receivedInfos = theUser->getReceivedUserInfos();
-        QString sAge;
-        sAge.setNum(receivedInfos.Age, 10);
+        if (theUser->getProtocolVersion_D() >= 0.3) {
+          CReceivedInfos receivedInfos = theUser->getReceivedUserInfos();
+          QString sAge;
+          sAge.setNum(receivedInfos.Age, 10);
 
-        if (receivedInfos.Gender != nullptr || sAge != "0" || receivedInfos.Interests != nullptr) {
-          Infos += "\nUser Information:\n";
-          if (receivedInfos.Gender != nullptr) {
-            Infos += "Gender:\t\t" + receivedInfos.Gender + "\n";
-          }
-          if (sAge != nullptr && sAge != "0") {
-            Infos += "Age:\t\t" + sAge + "\n";
-          }
-          if (receivedInfos.Interests != nullptr) {
-            Infos += "Interests:\t\t" + receivedInfos.Interests;
+          if (receivedInfos.Gender != nullptr || sAge != "0" ||
+              receivedInfos.Interests != nullptr) {
+            if (receivedInfos.Gender != nullptr) {
+              Infos += "Gender:\t\t" + receivedInfos.Gender + "  \n";
+            }
+            if (sAge != nullptr && sAge != "0") {
+              Infos += "Age:\t\t" + sAge + "  \n";
+            }
+            if (receivedInfos.Interests != nullptr) {
+              Infos += "More info:\t\t" + receivedInfos.Interests + "  \n";
+            }
+            Infos += " \n";
           }
         }
+
+        Infos += "Client:\t\t" + theUser->getClientName() + " " +
+                 theUser->getClientVersion() + "  \n";
+        Infos += "Protocol:\t\t" + theUser->getProtocolVersion() + "  \n";
+        Infos += "File transfer:\t" +
+                 theUser->getMinProtocolVersionFiletransfer() + " - " +
+                 theUser->getMaxProtocolVersionFiletransfer() + "  \n";
+      } else {
+        Infos = "Nickname:\t" + theUser->getName() + "  \n";
+        Infos += "Status:\tOffline  \n";
       }
     }
   }
@@ -233,6 +235,24 @@ bool CUserManager::validateI2PDestination(const QString I2PDestination) const {
       return false;
   };
 
+  auto validateEdDSA_SHA512_Ed25519 = [](QString Dest) {
+    if (Dest.length() == 524 &&
+        (Dest.right(5).contains("AAQ==", Qt::CaseInsensitive) ||
+         Dest.right(5).contains("AAA==", Qt::CaseInsensitive)))
+      return true;
+    else
+      return false;
+  };
+
+  auto validateRedDSA_SHA512_Ed25519 = [](QString Dest) {
+    if (Dest.length() == 524 &&
+        (Dest.right(5).contains("AAQ==", Qt::CaseInsensitive) ||
+         Dest.right(5).contains("AAA==", Qt::CaseInsensitive)))
+      return true;
+    else
+      return false;
+  };
+
   if (I2PDestination.right(4).contains("AAAA", Qt::CaseInsensitive)) {
     return validateB64(I2PDestination);
   } else if (I2PDestination.right(8).contains(".b32.i2p",
@@ -248,6 +268,14 @@ bool CUserManager::validateI2PDestination(const QString I2PDestination) const {
              I2PDestination.mid(512, 9).contains("BQAIAAMAA",
                                                  Qt::CaseInsensitive)) {
     return validateECDSA_SHA512_P512(I2PDestination);
+  } else if (I2PDestination.length() == 524 &&
+             (I2PDestination.right(5).contains("AAA==", Qt::CaseInsensitive) ||
+              I2PDestination.right(5).contains("AAQ==", Qt::CaseInsensitive))) {
+    return validateEdDSA_SHA512_Ed25519(I2PDestination);
+  } else if (I2PDestination.length() == 524 &&
+             (I2PDestination.right(5).contains("AAA==", Qt::CaseInsensitive) ||
+              I2PDestination.right(5).contains("AAQ==", Qt::CaseInsensitive))) {
+    return validateRedDSA_SHA512_Ed25519(I2PDestination);
   } else
     return false;
 }
@@ -256,6 +284,10 @@ bool CUserManager::addNewUser(QString Name, QString I2PDestination,
                               qint32 I2PStream_ID, bool SaveUserList) {
   CUserBlockManager &UserBlockManager = *(mCore.getUserBlockManager());
   CProtocol &Protocol = *(mCore.getProtocol());
+  if (!mCore.getAccessAnyoneIncoming())
+    return false;
+  if (!nicknameRegExp.exactMatch(Name))
+    Name = "NonValidNick";
 
   bool isValid = validateI2PDestination(I2PDestination);
 
@@ -274,13 +306,16 @@ bool CUserManager::addNewUser(QString Name, QString I2PDestination,
           return critical("Already exists user");
   }*/
   if (isValid == false) {
-    /*		qCritical()<<"File\t"<<__FILE__<<endl
-                               <<"Line:\t"<<__LINE__<<endl
-                               <<"Function:\t"<<"CUserManager::addNewUser"<<endl
-                               <<"Message:\t"<<"Destination is not valid"<<endl
-                               <<"Destination:\t"<<I2PDestination<<endl
-                               <<"action add new User ignored"<<endl;
-                    return false;
+    /*
+        qCritical() << "File\t" << __FILE__ << endl
+                    << "Line:\t" << __LINE__ << endl
+                    << "Function:\t"
+                    << "CUserManager::addNewUser" << endl
+                    << "Message:\t"
+                    << "Destination is not valid" << endl
+                    << "Destination:\t" << I2PDestination << endl
+                    << "Action:\tAdd New User ignored" << endl;
+        return false;
     */
     return critical("Not a valid user");
   }

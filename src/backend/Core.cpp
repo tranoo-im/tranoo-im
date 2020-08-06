@@ -38,6 +38,8 @@ CCore::CCore(QString configPath) {
   mSoundManager = new CSoundManager(mConfigPath);
 
   QSettings settings(mConfigPath + "/application.ini", QSettings::IniFormat);
+  m_access_anyone_incoming =
+      settings.value("Users/allow_incoming_new_users", true).toBool();
   settings.beginGroup("Network");
   mMyDestinationB32 = settings.value("MyDestinationB32", "").toString(),
 
@@ -47,10 +49,10 @@ CCore::CCore(QString configPath) {
 
   connect(mConnectionManager,
           SIGNAL(signNamingReplyReceived(const SAM_Message_Types::RESULT,
-                                        QString, QString, QString)),
+                                         QString, QString, QString)),
           this,
           SLOT(slotNamingReplyReceived(const SAM_Message_Types::RESULT, QString,
-                                      QString, QString)),
+                                       QString, QString)),
           Qt::DirectConnection);
 
   connect(mConnectionManager, SIGNAL(signStreamControllerStatusOK(bool)), this,
@@ -61,10 +63,10 @@ CCore::CCore(QString configPath) {
 
   connect(mConnectionManager,
           SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                         const qint32, const QString)),
+                                          const qint32, const QString)),
           this,
           SLOT(slotStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                       const qint32, QString)));
+                                        const qint32, QString)));
 
   connect(mConnectionManager, SIGNAL(signIncomingStream(CI2PStream *)), this,
           SLOT(slotIncomingStream(CI2PStream *)));
@@ -159,6 +161,15 @@ QString CCore::calcSessionOptionString() const {
   // + " " for void CSessionController::doSessionCreate() a session option.
 
   SessionOptionString.append(
+      "i2cp.gzip=" + settings.value("i2cp.gzip", "true").toString() + " ");
+  SessionOptionString.append(
+      "i2cp.messageReliability=" +
+      settings.value("i2cp.messageReliability", "BestEffort").toString() + " ");
+  SessionOptionString.append(
+      "i2cp.fastReceive=" +
+      settings.value("i2cp.fastReceive", "true").toString() + " ");
+
+  SessionOptionString.append(
       "inbound.nickname=" +
       settings.value("TunnelName", "I2PChat").toString().replace(" ", "_") +
       " ");
@@ -186,13 +197,24 @@ QString CCore::calcSessionOptionString() const {
       "outbound.length=" + settings.value("outbound.length", "3").toString() +
       " ");
 
+  // throttle per client dest to max 60 connections/min to mitigate denial of
+  // service ?? is this hampering our file transfers???
+  // SessionOptionString.append(
+  //    "i2p.streaming.maxConnsPerMinute=" +
+  //    settings.value("i2p.streaming.maxConnsPerMinute", "60").toString() + "
+  //    ");
+
   // SIGNATURE_TYPE
 
   {
     // TODO: get from ui_form_settingsgui.h
-    QStringList AllowSignTypes = {"DSA_SHA1", "ECDSA_SHA256_P256",
-                                  "ECDSA_SHA384_P384", "ECDSA_SHA512_P521"};
-    auto sign_type = settings.value("Signature_Type", "DSA_SHA1").toString();
+
+    QStringList AllowSignTypes = {"ECDSA_SHA256_P256", "ECDSA_SHA384_P384",
+                                  "ECDSA_SHA512_P521", "EdDSA_SHA512_Ed25519",
+                                  "RedDSA_SHA512_Ed25519"};
+
+    auto sign_type =
+        settings.value("Signature_Type", "EdDSA_SHA512_Ed25519").toString();
     auto notfound = true;
     for (int i = 0; i < AllowSignTypes.size(); ++i) {
       if (sign_type.contains(AllowSignTypes.at(i))) {
@@ -202,18 +224,38 @@ QString CCore::calcSessionOptionString() const {
       }
     }
     if (notfound)
-      SessionOptionString.append("SIGNATURE_TYPE=" + QString("DSA_SHA1") + " ");
+      SessionOptionString.append(
+          "SIGNATURE_TYPE=" + QString("EdDSA_SHA512_Ed25519") + " ");
   }
 
   /// TODO check for valid string match DSA_SHA1 || ECDSA_SHA256_P256 ... ; UPD:
   /// Maybe is fixed;
-  /// TODO which Signature_Type as default for best security ???
 
   // Encryption
-  // TODO: Add to UI
-  SessionOptionString.append(
-      "leaseSetEncType=" + settings.value("leaseSetEncType", "4,0").toString() +
-      " ");
+  // TODO: Enable in UI
+
+  {
+    QStringList AllowEncTypes = {"4", "4,0", "4, 0"};
+
+    // auto enc_type = settings.value("i2cp.leaseSetEncType=",
+    // "4,0").toString();
+    auto enc_type = settings.value("i2cp.leaseSetEncType=", "4").toString();
+    auto encnotfound = true;
+    for (int i = 0; i < AllowEncTypes.size(); ++i) {
+      if (enc_type.contains(AllowEncTypes.at(i))) {
+        SessionOptionString.append("i2cp.leaseSetEncType=" + enc_type + " ");
+        encnotfound = false;
+        break;
+      }
+    }
+    if (encnotfound)
+      SessionOptionString.append(
+          "i2cp.leaseSetEncType=" +
+          // settings.value("i2cp.leaseSetEncType=", "4,0").toString() + " ");
+          settings.value("i2cp.leaseSetEncType=", "4").toString() + " ");
+  }
+
+  SessionOptionString.append("I2PClient.PROP_GZIP=true ");
 
   settings.remove("SessionOptionString"); // no longer used,- so erase it
   settings.endGroup();
@@ -244,7 +286,7 @@ void CCore::init() {
 }
 
 void CCore::slotStreamStatusReceived(const SAM_Message_Types::RESULT result,
-                                    const qint32 ID, QString Message) {
+                                     const qint32 ID, QString Message) {
 
   CI2PStream *stream = mConnectionManager->getStreamObjectByID(ID);
   CUser *user = NULL;
@@ -323,7 +365,7 @@ void CCore::slotStreamStatusReceived(const SAM_Message_Types::RESULT result,
     } else {
       mConnectionManager->doDestroyStreamObjectByID(ID);
       user->slotIncomingMessageFromSystem(
-          tr("Invalid User - Destination: please delete the user\n"));
+          tr("Invalid Contact Destination: please delete the user\n"));
       user->setConnectionStatus(CONNECTERROR);
     }
     deletePacketManagerByID(ID);
@@ -365,8 +407,8 @@ void CCore::closeAllActiveConnections() {
 }
 
 void CCore::slotNamingReplyReceived(const SAM_Message_Types::RESULT result,
-                                   QString Name, QString Value,
-                                   QString Message) {
+                                    QString Name, QString Value,
+                                    QString Message) {
   if (result == SAM_Message_Types::OK && Name == "ME" &&
       mMyDestination.isEmpty()) {
     this->mMyDestination = Value;
@@ -443,16 +485,6 @@ QString CCore::getConnectionDump() const {
       } else {
         Message += "\tStream Mode:\t???\n";
       }
-
-      // Print ConnectionType
-      if (Stream->getConnectionType() == UNKNOWN) {
-        Message += "\tTrust:\t\tUNKNOWN\n";
-      } else if (Stream->getConnectionType() == KNOWN) {
-        Message += "\tTrust:\t\tKNOWN\n";
-      } else {
-        Message += "\tTrust:\t\t???\n";
-      }
-//      Message += "\tPurpose:\t\t" + Stream->getUsedFor() + "\n\n";
     }
 
     Message += "• Streams\n\n";
@@ -494,6 +526,8 @@ QString CCore::getConnectionDump() const {
         Message += "\n";
       } else if (Stream->getConnectionType() == KNOWN) {
         Message += "\tTrust:\t\tKNOWN\n";
+        if (Stream->getUsedFor() == "FileTransferSend")
+          Message += "\n";
       } else {
         Message += "\tTrust:\t\t???\n";
       }
@@ -506,12 +540,13 @@ QString CCore::getConnectionDump() const {
         if (theUser->getClientVersion() != nullptr) {
           Message += " " + theUser->getClientVersion() + "\n";
         }
-        if (theUser->getProtocolVersion() != nullptr && Stream->getConnectionType() != UNKNOWN) {
+        if (theUser->getProtocolVersion() != nullptr &&
+            Stream->getConnectionType() != UNKNOWN) {
           Message += "\tProtocol:\t\t" + theUser->getProtocolVersion() + "\n\n";
         }
       }
     }
-  return Message;
+    return Message;
   }
 }
 
@@ -614,13 +649,12 @@ QString CCore::getDestinationByID(qint32 ID) const {
     return user->getI2PDestination();
   }
 
-  CFileTransferSend *send = mFileTransferManager->getFileTransferSendsByID(ID);
+  CFileTransferSend *send = mFileTransferManager->getFileSendByID(ID);
   if (send != NULL) {
     return send->getDestination();
   }
 
-  CFileTransferReceive *receive =
-      mFileTransferManager->getFileTransferReceiveByID(ID);
+  CFileTransferReceive *receive = mFileTransferManager->getFileReceiveByID(ID);
   if (receive != NULL) {
     return receive->getDestination();
   }
@@ -707,10 +741,10 @@ void CCore::createStreamObjectForUser(CUser &User) {
   CI2PStream *t = mConnectionManager->doCreateNewStreamObject(CONNECT);
   connect(t,
           SIGNAL(signStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                         const qint32, const QString)),
+                                          const qint32, const QString)),
           this,
           SLOT(slotStreamStatusReceived(const SAM_Message_Types::RESULT,
-                                       const qint32, QString)));
+                                        const qint32, QString)));
 
   User.setI2PStreamID(t->getID());
 
@@ -769,27 +803,31 @@ void CCore::loadUserInfos() {
 
   if (mUserInfos.Nickname.isEmpty() == true) {
     // generate random Nickname (8 Chars)
-    const QString possibleCharacters(
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-    const int randomStringLength = 8;
 
-    QString randomString;
-    for (int i = 0; i < randomStringLength; ++i) {
-      int index = qrand() % possibleCharacters.length();
-      QChar nextChar = possibleCharacters.at(index);
-      randomString.append(nextChar);
-    }
-    mUserInfos.Nickname = randomString;
+    /*
+        const QString possibleCharacters(
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+        const int randomStringLength = 8;
+
+        QString randomString;
+        for (int i = 0; i < randomStringLength; ++i) {
+          int index = qrand() % possibleCharacters.length();
+          QChar nextChar = possibleCharacters.at(index);
+          randomString.append(nextChar);
+        }
+    */
+    mUserInfos.Nickname = "Undefined";
 
     settings.setValue("Nickname", mUserInfos.Nickname);
     emit signNicknameChanged();
 
     QMessageBox *msgBox = new QMessageBox(NULL);
     msgBox->setIcon(QMessageBox::Information);
-    msgBox->setInformativeText(
-        tr("No username...\ngenerating one: %1\n\nplease change your "
-           "userprofile in the settings")
-            .arg(randomString));
+    msgBox->setText(tr("\nNo username configured\nUsing \'%1\'  \n\nChange in "
+                       "Settings -> User Details")
+                        //            .arg(randomString));
+                        .arg(mUserInfos.Nickname));
+
     msgBox->setStandardButtons(QMessageBox::Ok);
     msgBox->setDefaultButton(QMessageBox::Ok);
     msgBox->setWindowModality(Qt::NonModal);
@@ -812,6 +850,11 @@ void CCore::loadUserInfos() {
   }
   settings.endGroup();
   settings.sync();
+
+  if (!nicknameRegExp.exactMatch(mUserInfos.Nickname)) {
+    mUserInfos.Nickname = "NonValidNick";
+    emit signNicknameChanged();
+  }
 }
 
 const CReceivedInfos CCore::getUserInfos() const { return mUserInfos; }
@@ -877,3 +920,5 @@ QString CCore::canonicalizeTopicId(QString topicIdNonCanonicalized) {
   // FIXME canonicalizeTopicId(topicIdNonCanonicalized);
   return topicIdNonCanonicalized;
 }
+
+void CCore::changeAccessIncomingUsers(bool m) { m_access_anyone_incoming = m; }

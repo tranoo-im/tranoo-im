@@ -34,8 +34,8 @@ class CFileTransferReceive : public QObject {
   Q_OBJECT
 public:
   CFileTransferReceive(CCore &Core, CI2PStream &Stream, qint32 StreamID,
-                      QString FileName, quint64 FileSize, QString Destination,
-                      QString Protocolversion, double ProtocolversionD);
+                       QString FileName, quint64 FileSize, QString Destination,
+                       QString Protocolversion, double ProtocolversionD);
   ~CFileTransferReceive();
 
   // forbid some operators
@@ -48,10 +48,10 @@ public:
   QString getFileName() { return mFileName; };
   QString getDestination() { return mDestination; };
   qint32 getStreamID() { return mStreamID; };
-  quint64 getAllreadyReceivedSize() { return mAllreadyReceivedSize; };
+  quint64 getTransferredSize() { return mAlreadyReceivedSize; };
   QString getUsingProtocolVersion() { return mUsingProtocolVersion; };
 
-  bool checkIfAllreadyAcceptTheRequest() { return mRequestAccepted; };
+  bool checkIfRequestAccepted() { return mRequestAccepted; };
 
   void doConvertNumberToTransferSize(quint64 inNumber, QString &outNumber,
                                      QString &outType,
@@ -62,12 +62,12 @@ public slots:
 
 private slots:
   void slotStreamStatusReceived(const SAM_Message_Types::RESULT result,
-                               const qint32 ID, QString Message);
+                                const qint32 ID, QString Message);
   void slotDataReceived(const qint32 ID, QByteArray t);
   void slotCalcAverageTransferSpeed();
 
 signals:
-  void signAllreadyReceivedSizeChanged(quint64 Size);
+  void signgetTransferredSizeChanged(quint64 Size);
   void signFileReceiveError();
   void signFileReceivedFinishedOK();
   void signFileReceiveAborted();
@@ -84,7 +84,7 @@ private:
   const QString mDestination;
   const QString mUsingProtocolVersion;
   const double mUsingProtocolVersionD;
-  quint64 mAllreadyReceivedSize;
+  quint64 mAlreadyReceivedSize;
   QFile mFileForReceive;
   bool mRequestAccepted;
   QTimer mTimerForActAverageTransferSpeed;
