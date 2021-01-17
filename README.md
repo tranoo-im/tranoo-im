@@ -1,4 +1,10 @@
-# I2PChat (formerly I2P-Messenger)
+# Tranoo Messenger
+
+Work In Progress
+
+Older info below
+
+# I2PChat (formerly I2P-Qt-Messenger)
 [![Build status appveyor MinGW32](https://ci.appveyor.com/api/projects/status/0tanjnojnlpksug6?svg=true)](https://ci.appveyor.com/project/wipedlifepotato/i2pchat)
 [![Build Status travis linux(xenial)](https://travis-ci.org/wipedlifepotato/i2pchat.svg?branch=master)](https://travis-ci.org/wipedlifepotato/i2pchat)
 ## Screenshots
